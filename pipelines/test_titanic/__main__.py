@@ -9,6 +9,7 @@ from pipelines.test_titanic.train_test import download_data
 from pipelines.test_titanic.train_test import preprocess_data
 from pipelines.test_titanic.train_test import training
 from pipelines.test_titanic.train_test import testing
+from pipelines.test_titanic.train_test import calculate_accuracy
 
 
 # Load .env
@@ -31,6 +32,11 @@ training_op = func_to_container_op(
 
 testing_op = func_to_container_op(
     testing,
+    packages_to_install=['scikit-learn', 'numpy'],
+)
+
+calculate_accuracy_op = func_to_container_op(
+    calculate_accuracy,
     packages_to_install=['scikit-learn', 'numpy'],
 )
 
@@ -60,6 +66,11 @@ def train_and_test_pipeline():
         trained_model=training_task.outputs['trained_model'],
         features=preprocess_test_data_task.outputs['features']
     ).after(training_task, preprocess_test_data_task)
+
+    calculate_accuracy_task = calculate_accuracy_op(
+        predicted=testing_task.outputs['predicted'],
+        labels=preprocess_test_data_task.outputs['labels']
+    ).after(testing_task)
 
 
 client = get_kfp_client(

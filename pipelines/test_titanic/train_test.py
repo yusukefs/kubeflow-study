@@ -43,7 +43,7 @@ def training(
 def testing(
     trained_model_file: InputBinaryFile(bytes),
     features_file: InputBinaryFile(bytes),
-    predicted_path: OutputPath(str),
+    predicted_file: OutputBinaryFile(bytes),
 ):
     import pickle
     model = pickle.load(trained_model_file)
@@ -52,7 +52,17 @@ def testing(
     features = np.load(features_file)
 
     predicted = model.predict(features)
+    np.save(predicted_file, predicted)
 
-    import json
-    with open(predicted_path, 'w') as f:
-        json.dump(predicted.tolist(), f)
+
+def calculate_accuracy(
+    predicted_file: InputBinaryFile(bytes),
+    labels_file: InputBinaryFile(bytes),
+) -> float:
+    import numpy as np
+    predicted = np.load(predicted_file)
+    true_labels = np.load(labels_file)
+
+    from sklearn.metrics import accuracy_score
+    accuracy = accuracy_score(predicted, true_labels)
+    return accuracy
