@@ -14,6 +14,9 @@ def preprocess_data(
     labels_file: OutputBinaryFile(bytes),
     features_file: OutputBinaryFile(bytes),
 ):
+    '''
+    Reference: https://towardsdatascience.com/predicting-the-survival-of-titanic-passengers-30870ccc7e8
+    '''
     import pandas as pd
     df = pd.read_csv(input_data_path)
 
@@ -21,8 +24,54 @@ def preprocess_data(
     labels = df['survived'].values
     np.save(labels_file, labels)
 
-    features = df[['age', 'n_siblings_spouses', 'parch', 'fare']].values
-    np.save(features_file, features)
+    df_features = df[[
+        'sex',
+        'age',
+        'n_siblings_spouses',
+        'parch',
+        'fare',
+        'class',
+        'deck',
+        'embark_town',
+        'alone',
+    ]].copy()
+
+    # Preprocess sex column
+    genders = {'male': 0, 'female': 1}
+    df_features['sex'] = df_features['sex'].map(genders)
+
+    # Preprocess age column
+    df_features['age'] = df_features['age'].astype(int)
+    df_features.loc[ df_features['age'] <= 11, 'age'] = 0
+    df_features.loc[(df_features['age'] > 11) & (df_features['age'] <= 18), 'age'] = 1
+    df_features.loc[(df_features['age'] > 18) & (df_features['age'] <= 22), 'age'] = 2
+    df_features.loc[(df_features['age'] > 22) & (df_features['age'] <= 27), 'age'] = 3
+    df_features.loc[(df_features['age'] > 27) & (df_features['age'] <= 33), 'age'] = 4
+    df_features.loc[(df_features['age'] > 33) & (df_features['age'] <= 40), 'age'] = 5
+    df_features.loc[(df_features['age'] > 40) & (df_features['age'] <= 66), 'age'] = 6
+    df_features.loc[ df_features['age'] > 66, 'age'] = 6
+
+    # Preprocess class column
+    classes = {'First': 1, 'Second': 2, 'Third': 3}
+    df_features['class'] = df_features['class'].map(classes)
+
+    # Preprocess class deck
+    deck = {'unknown': 0, 'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'U': 8}
+    df_features['deck'] = df_features['deck'].map(deck)
+    df_features['deck'] = df_features['deck'].fillna(0)
+
+    # Preprocess class embark_town
+    embark_town = {'Southampton': 1, 'Queenstown': 2, 'Cherbourg': 3}
+    df_features['embark_town'] = df_features['embark_town'].map(embark_town)
+    df_features['embark_town'] = df_features['embark_town'].fillna(0)
+
+    # Preprocess class alone
+    alone = {'y': 1, 'n': 0}
+    df_features['alone'] = df_features['alone'].map(alone)
+
+    print(df_features)
+
+    np.save(features_file, df_features.values)
 
 
 def training(
@@ -34,8 +83,8 @@ def training(
     labels = np.load(train_labels_file)
     features = np.load(train_features_file)
 
-    from sklearn import svm
-    model = svm.SVC()
+    from sklearn.ensemble import RandomForestClassifier
+    model = RandomForestClassifier(n_estimators=100)
     model.fit(features, labels)
 
     import pickle
