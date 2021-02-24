@@ -9,7 +9,7 @@ from pipelines.test_titanic.train_test import download_data
 from pipelines.test_titanic.train_test import preprocess_data
 from pipelines.test_titanic.train_test import training
 from pipelines.test_titanic.train_test import testing
-from pipelines.test_titanic.train_test import calculate_accuracy
+from pipelines.test_titanic.train_test import evaluate_prediction
 
 
 # Load .env
@@ -35,9 +35,9 @@ testing_op = func_to_container_op(
     packages_to_install=['scikit-learn', 'numpy'],
 )
 
-calculate_accuracy_op = func_to_container_op(
-    calculate_accuracy,
-    packages_to_install=['scikit-learn', 'numpy'],
+evaluate_prediction_op = func_to_container_op(
+    evaluate_prediction,
+    packages_to_install=['scikit-learn', 'numpy', 'pandas'],
 )
 
 
@@ -64,12 +64,12 @@ def train_and_test_pipeline():
     ).after(download_test_data_task)
     testing_task = testing_op(
         trained_model=training_task.outputs['trained_model'],
-        features=preprocess_test_data_task.outputs['features']
+        features=preprocess_test_data_task.outputs['features'],
     ).after(training_task, preprocess_test_data_task)
 
-    calculate_accuracy_task = calculate_accuracy_op(
+    evaluate_prediction_op_task = evaluate_prediction_op(
         predicted=testing_task.outputs['predicted'],
-        labels=preprocess_test_data_task.outputs['labels']
+        labels=preprocess_test_data_task.outputs['labels'],
     ).after(testing_task)
 
 
